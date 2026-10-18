@@ -1,4 +1,4 @@
-/* 我在哪裡，要吃甚麼？ — 介面與互動 */
+/* Allan在哪裡，要吃甚麼？ — 介面與互動 */
 (function () {
   'use strict';
   const D = WTE.DATA;
@@ -1123,7 +1123,7 @@
       ].filter(Boolean),
       date: now.date.replace(/-/g, '/') + ' ' + pad(now.hh) + ':' + pad(now.mm),
       text: '【今天吃這個】' + item.food.emoji + ' ' + item.food.name + (c ? '（' + c.name + '）' : '') + '\n' +
-        state.narration.replace(/\n+/g, ' ') + '\n— 我在哪裡，要吃甚麼？ × 阿拉蕾 AI',
+        state.narration.replace(/\n+/g, ' ') + '\n— Allan在哪裡，要吃甚麼？ × 阿拉蕾 AI',
     };
   }
 
@@ -1240,7 +1240,7 @@
     g.font = '28px ' + display;
     g.fillStyle = '#1d8a83';
     g.textAlign = 'center';
-    g.fillText('我在哪裡，要吃甚麼？ × 阿拉蕾 AI', W / 2, H - 112);
+    g.fillText('Allan在哪裡，要吃甚麼？ × 阿拉蕾 AI', W / 2, H - 112);
     return cv;
   }
 

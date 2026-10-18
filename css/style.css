@@ -1,4 +1,4 @@
-/* 我在哪裡，要吃甚麼？
+/* Allan在哪裡，要吃甚麼？
  * Layout: comic-strip board — a host column (阿拉蕾) beside numbered comic panels;
  * on phones the host folds above the panels and everything stacks to one column.
  * Look: ink outlines + hard offset shadows from the character sheets, on mint halftone paper.
@@ -378,7 +378,7 @@ button, input { font: inherit; color: inherit; }
   margin-bottom: 0.9rem;
 }
 .hero h1 {
-  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  font-size: clamp(2.3rem, 9vw, 4.6rem);
   line-height: 1.12;
   color: var(--ink);
   text-shadow: 4px 4px 0 var(--sun);
