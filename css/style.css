@@ -1098,6 +1098,7 @@ button, input { font: inherit; color: inherit; }
   color: var(--muted);
 }
 .footer b { color: var(--ink); }
+.footer .made { color: var(--ink); font-family: var(--font-display); font-size: 1rem; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
