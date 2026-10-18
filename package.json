@@ -1,0 +1,10 @@
+{
+  "name": "what-to-eat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "我在哪裡，要吃甚麼？— 阿拉蕾 AI 美食小助手（純前端靜態網頁）",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test"
+  }
+}

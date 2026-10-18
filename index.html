@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>我在哪裡，要吃甚麼？</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="選心情、看天氣、挑飯友，AI 小助手阿拉蕾從台灣 22 縣市美食中幫你決定要吃什麼，再找附近的店。">
+<meta name="theme-color" content="#1d8a83">
+<link rel="icon" href="assets/img/arale-laugh.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">
+      <img src="assets/img/arale-laugh.webp" alt="" width="36" height="36">
+      <span>我在哪裡，要吃甚麼？</span>
+    </a>
+    <div class="status" aria-label="目前條件">
+      <button class="chip" type="button" data-goto="0" id="st-place">📍 選地點</button>
+      <button class="chip" type="button" data-goto="1" id="st-weather">🌤️ 天氣</button>
+      <button class="chip" type="button" data-goto="1" id="st-slot">🕐 時段</button>
+    </div>
+    <button class="btn small ghost" type="button" id="open-passport" aria-label="美食護照">📒 <span class="pp-label">美食護照</span> <b id="stamp-count">0</b></button>
+  </div>
+</header>
+
+<p class="festival" id="festival" hidden></p>
+
+<section class="hero" id="top">
+  <div class="sky" id="sky" data-wx="nice" aria-hidden="true">
+    <i class="sun"></i><i class="moon"></i>
+    <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+    <i class="rain"></i><i class="wind"></i><i class="stars"></i>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">Allan &amp; 阿拉蕾的覓食分鏡</p>
+      <h1>我在哪裡，<br>要吃甚麼？</h1>
+      <p class="lede">選心情、看天氣、挑飯友。阿拉蕾從 <b id="food-total">208</b> 道台灣美食裡幫你挑一道，再找附近的店。</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#board">開始選擇</a>
+        <button class="btn holo" type="button" id="auto-go">⚡ 交給阿拉蕾決定</button>
+      </div>
+    </div>
+    <div class="hero-cast">
+      <p class="bubble hero-bubble" id="hero-bubble">Allan，肚子餓了嗎？</p>
+      <img class="cast-allan" src="assets/img/allan-wave.webp" alt="Allan 在揮手" width="477" height="560">
+      <img class="cast-arale" src="assets/img/arale-hello.webp" alt="AI 小助手阿拉蕾在揮手" width="307" height="560">
+    </div>
+  </div>
+</section>
+
+<main class="stage" id="board">
+  <aside class="host">
+    <div class="host-face"><img id="host-img" src="assets/img/arale-laugh.webp" alt="阿拉蕾" width="263" height="290"></div>
+    <p class="bubble host-bubble" id="host-say" aria-live="polite">Allan，你現在在哪裡呀？</p>
+  </aside>
+
+  <section class="board">
+    <ol class="strip" id="strip">
+      <li><button type="button" data-step="0"><i>1</i><b>地點</b><span id="sum-0">未選</span></button></li>
+      <li><button type="button" data-step="1"><i>2</i><b>天氣時段</b><span id="sum-1">自動</span></button></li>
+      <li><button type="button" data-step="2"><i>3</i><b>心情</b><span id="sum-2">未選</span></button></li>
+      <li><button type="button" data-step="3"><i>4</i><b>飯友</b><span id="sum-3">一個人</span></button></li>
+      <li><button type="button" data-step="4"><i>5</i><b>偏好</b><span id="sum-4">剛好</span></button></li>
+    </ol>
+
+    <!-- 第 1 格：地點 -->
+    <div class="panel" data-step="0">
+      <div class="panel-head">
+        <h2>我在哪裡？</h2>
+        <p>讓阿拉蕾定位，或直接點地圖上的縣市。</p>
+      </div>
+      <div class="locate-row">
+        <button class="btn" type="button" id="locate">📍 自動定位</button>
+        <span class="hint" id="locate-msg">座標只在你的瀏覽器裡使用</span>
+      </div>
+      <div class="place-grid">
+        <div class="tilemap" id="tilemap" role="group" aria-label="台灣縣市地圖"></div>
+        <div class="county-card" id="county-card">
+          <p class="county-empty">點一個縣市，看看當地有什麼好吃的。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第 2 格：天氣與時段 -->
+    <div class="panel" data-step="1" hidden>
+      <div class="panel-head">
+        <h2>天氣和時段</h2>
+        <p>阿拉蕾會自動抓，不對的話自己改。</p>
+      </div>
+      <div class="wx-now" id="wx-now">
+        <span class="wx-icon" id="wx-icon">🌤️</span>
+        <div class="wx-text">
+          <b id="wx-temp">--°</b>
+          <span id="wx-desc">選好縣市後自動查詢即時天氣</span>
+        </div>
+        <button class="btn small" type="button" id="wx-refresh">重新查詢</button>
+      </div>
+      <h3>體感溫度</h3>
+      <div class="chips" id="temp-chips" role="radiogroup" aria-label="體感溫度"></div>
+      <h3>天空</h3>
+      <div class="chips" id="sky-chips" role="radiogroup" aria-label="天空狀況"></div>
+      <h3>現在是 <small id="clock-hint"></small></h3>
+      <div class="slots" id="slot-chips" role="radiogroup" aria-label="用餐時段"></div>
+    </div>
+
+    <!-- 第 3 格：心情 -->
+    <div class="panel" data-step="2" hidden>
+      <div class="panel-head">
+        <h2>今天心情如何？</h2>
+        <p>選一張最像你現在的臉。</p>
+      </div>
+      <div class="moods" id="moods" role="radiogroup" aria-label="心情"></div>
+    </div>
+
+    <!-- 第 4 格：飯友 -->
+    <div class="panel" data-step="3" hidden>
+      <div class="panel-head">
+        <h2>跟誰吃？</h2>
+        <p>一個人吃，還是約了飯友？</p>
+      </div>
+      <div class="seg big" id="solo-seg" role="radiogroup" aria-label="用餐人數">
+        <button type="button" data-solo="1" role="radio"><img src="assets/img/allan-stand.webp" alt="" width="194" height="560"><span>一個人吃</span></button>
+        <button type="button" data-solo="0" role="radio"><span class="group-icons">🙌</span><span>約飯友一起</span></button>
+      </div>
+      <div class="group-opts" id="group-opts" hidden>
+        <h3>飯友是誰？<small>可複選</small></h3>
+        <div class="chips" id="companion-chips"></div>
+        <h3>總共幾個人？</h3>
+        <div class="stepper">
+          <button type="button" class="btn small" id="size-minus" aria-label="減少人數">−</button>
+          <output id="size-out">2</output>
+          <button type="button" class="btn small" id="size-plus" aria-label="增加人數">＋</button>
+        </div>
+        <h3>飯友名字 <small>選填，抽「誰買單」會用到</small></h3>
+        <form class="name-form" id="name-form">
+          <input id="name-input" type="text" maxlength="12" placeholder="輸入名字後按新增" autocomplete="off">
+          <button class="btn small" type="submit">新增</button>
+        </form>
+        <div class="chips" id="name-chips"></div>
+      </div>
+      <label class="me-row" for="me-input">你的名字 <input id="me-input" type="text" maxlength="12" value="Allan" autocomplete="off"></label>
+    </div>
+
+    <!-- 第 5 格：偏好 -->
+    <div class="panel" data-step="4" hidden>
+      <div class="panel-head">
+        <h2>預算和忌口</h2>
+        <p>最後一格，告訴阿拉蕾才不會推錯。</p>
+      </div>
+      <h3>預算</h3>
+      <div class="seg" id="budget-seg" role="radiogroup" aria-label="預算"></div>
+      <h3>忌口 <small>可複選</small></h3>
+      <div class="chips" id="diet-chips"></div>
+      <h3>可以走多遠？</h3>
+      <div class="seg" id="distance-seg" role="radiogroup" aria-label="距離"></div>
+    </div>
+
+    <div class="board-nav">
+      <button class="btn" type="button" id="prev">← 上一格</button>
+      <button class="btn" type="button" id="next">下一格 →</button>
+      <button class="btn primary" type="button" id="analyze">🔮 開始分析</button>
+    </div>
+  </section>
+</main>
+
+<section class="result" id="result" hidden>
+  <div class="result-inner">
+    <div class="talk">
+      <img class="talk-face" id="res-arale" src="assets/img/arale-explain.webp" alt="阿拉蕾" width="318" height="285">
+      <div class="bubble talk-bubble">
+        <span class="ai-badge" id="ai-badge" hidden>✨ Claude AI</span>
+        <p id="res-text" aria-live="polite"></p>
+        <p class="ai-note" id="ai-note" hidden></p>
+      </div>
+    </div>
+
+    <article class="pick" id="pick">
+      <div class="plate" id="plate"><span id="pick-emoji">🍜</span><i class="steam"></i><i class="steam"></i><i class="steam"></i></div>
+      <div class="pick-info">
+        <div class="pick-tags" id="pick-tags"></div>
+        <h2 id="pick-name">牛肉麵</h2>
+        <p id="pick-desc"></p>
+        <div class="pick-meta">
+          <span class="meter" id="pick-meter" style="--pct:80"><b id="pick-pct">80</b><small>% 適配</small></span>
+          <span id="pick-price">$$</span>
+        </div>
+      </div>
+      <figure class="react">
+        <img id="res-allan" src="assets/img/allan-calm.webp" alt="Allan 的反應" width="228" height="300">
+        <figcaption class="bubble small-bubble" id="res-allan-say">好耶！</figcaption>
+      </figure>
+      <div class="stamp" id="pick-stamp" hidden><b>已蓋章</b><small id="stamp-date"></small></div>
+    </article>
+
+    <div class="actions">
+      <button class="btn primary" type="button" id="act-near">🗺️ 找附近店家</button>
+      <button class="btn" type="button" id="act-eat">✅ 就吃這個</button>
+      <button class="btn" type="button" id="act-wheel">🎰 命運轉盤</button>
+      <button class="btn" type="button" id="act-payer" hidden>💸 誰買單</button>
+      <button class="btn" type="button" id="act-card">🃏 飯局卡</button>
+      <button class="btn ghost" type="button" id="act-reroll">🎲 換一批</button>
+      <button class="btn ghost" type="button" id="act-edit">✏️ 改條件</button>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-why-btn" aria-selected="true" aria-controls="tab-why">推薦理由</button>
+      <button type="button" role="tab" id="tab-audit-btn" aria-selected="false" aria-controls="tab-audit">美食稽核報告</button>
+    </div>
+    <div class="tab-panel" id="tab-why" role="tabpanel" aria-labelledby="tab-why-btn"></div>
+    <div class="tab-panel audit" id="tab-audit" role="tabpanel" aria-labelledby="tab-audit-btn" hidden></div>
+
+    <h3 class="alts-title">其他候選 <small>點一下換成主推</small></h3>
+    <div class="alts" id="alts"></div>
+  </div>
+</section>
+
+<section class="nearby" id="nearby" hidden>
+  <div class="nearby-inner">
+    <div class="panel-head">
+      <h2 id="nb-title">附近的店家</h2>
+      <p id="nb-meta"></p>
+    </div>
+    <div class="nb-grid">
+      <div class="radar-wrap">
+        <svg class="radar" id="radar" viewBox="-120 -120 240 240" role="img" aria-label="美食雷達"></svg>
+      </div>
+      <div class="nb-side">
+        <p class="nb-state" id="nb-state"></p>
+        <ol class="nb-list" id="nb-list"></ol>
+      </div>
+    </div>
+    <div class="nb-links" id="nb-links"></div>
+    <p class="credit">店家資料 © OpenStreetMap contributors。營業時間與評價請以 Google 地圖和店家公告為準。</p>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p><b>隱私設計</b>　定位只在你的瀏覽器裡使用；查天氣時座標模糊到約 1 公里、查店家時約 100 公尺；美食護照只存在這台裝置，可隨時一鍵刪除。</p>
+    <p>天氣資料：Open-Meteo　店家資料：© OpenStreetMap contributors　角色：Allan &amp; 阿拉蕾</p>
+  </div>
+</footer>
+
+<!-- 分析中 -->
+<div class="overlay" id="analysis" hidden>
+  <div class="analysis-card" role="status" aria-live="polite">
+    <div class="holo-frame">
+      <img src="assets/img/arale-think.webp" alt="阿拉蕾正在思考" width="280" height="292">
+      <i class="scan"></i>
+    </div>
+    <ol class="ana-log" id="ana-log"></ol>
+    <div class="road"><img class="walker" src="assets/img/allan-walk.webp" alt="" width="89" height="360"></div>
+    <button class="btn small ghost" type="button" id="ana-skip">直接看結果</button>
+  </div>
+</div>
+
+<!-- 命運轉盤 -->
+<dialog class="dlg" id="dlg-wheel" aria-labelledby="wheel-title">
+  <div class="dlg-head"><h2 id="wheel-title">🎰 命運轉盤</h2><button class="x" type="button" data-close aria-label="關閉">×</button></div>
+  <div class="wheel-box">
+    <i class="wheel-pointer"></i>
+    <canvas id="wheel" width="640" height="640" aria-label="候選美食轉盤"></canvas>
+  </div>
+  <p class="dlg-result" id="wheel-result" aria-live="polite">按下開轉，讓命運決定！</p>
+  <div class="dlg-actions">
+    <button class="btn primary" type="button" id="wheel-spin">開轉！</button>
+    <button class="btn" type="button" id="wheel-use" hidden>就吃這個</button>
+  </div>
+</dialog>
+
+<!-- 誰買單 -->
+<dialog class="dlg" id="dlg-payer" aria-labelledby="payer-title">
+  <div class="dlg-head"><h2 id="payer-title">💸 今天誰買單？</h2><button class="x" type="button" data-close aria-label="關閉">×</button></div>
+  <div class="payer-names" id="payer-names"></div>
+  <p class="dlg-result" id="payer-result" aria-live="polite">抽出一位幸運兒請客！</p>
+  <div class="dlg-actions">
+    <button class="btn primary" type="button" id="payer-go">開始抽籤</button>
+  </div>
+  <div class="aa">
+    <label for="aa-total">或者 AA 制：總金額</label>
+    <input id="aa-total" type="number" inputmode="numeric" min="0" step="10" placeholder="例如 1280">
+    <output id="aa-out">每人 $0</output>
+  </div>
+</dialog>
+
+<!-- 美食護照 -->
+<dialog class="dlg wide" id="dlg-passport" aria-labelledby="passport-title">
+  <div class="dlg-head"><h2 id="passport-title">📒 Allan 的美食護照</h2><button class="x" type="button" data-close aria-label="關閉">×</button></div>
+  <div class="passport-grid">
+    <div class="tilemap stamps" id="passport-map" aria-label="已蓋章的縣市"></div>
+    <div class="passport-side">
+      <div class="pp-stats" id="pp-stats"></div>
+      <h3>最近吃了</h3>
+      <ol class="pp-list" id="pp-list"></ol>
+      <div class="pp-clear">
+        <button class="btn small ghost" type="button" id="pp-clear">🗑️ 刪除所有紀錄</button>
+        <span id="pp-confirm" hidden>確定刪除？<button class="btn small danger" type="button" id="pp-yes">刪除</button><button class="btn small" type="button" id="pp-no">取消</button></span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- 飯局卡 -->
+<dialog class="dlg" id="dlg-card" aria-labelledby="card-title">
+  <div class="dlg-head"><h2 id="card-title">🃏 今日飯局卡</h2><button class="x" type="button" data-close aria-label="關閉">×</button></div>
+  <img class="card-img" id="card-img" alt="今日飯局卡預覽">
+  <p class="dlg-result" id="card-msg" aria-live="polite"></p>
+  <div class="dlg-actions">
+    <button class="btn primary" type="button" id="card-save">下載圖片</button>
+    <button class="btn" type="button" id="card-share" hidden>分享</button>
+    <button class="btn" type="button" id="card-copy">複製文字</button>
+  </div>
+  <textarea class="card-text" id="card-text" readonly rows="4" aria-label="飯局文字"></textarea>
+</dialog>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/services.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
