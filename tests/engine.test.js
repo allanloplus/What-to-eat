@@ -189,3 +189,27 @@ test('口袋名店的店名也拿來比對 OpenStreetMap', () => {
   assert.match(S.buildQuery([food], 24.43, 118.32, 3000), /信源海產店/);
   assert.ok(!/金城分店/.test(S.buildQuery([food], 24.43, 118.32, 3000)));
 });
+
+test('飯友「老同學」偏好有回憶的經典老味道', () => {
+  const c = D.COMPANIONS.find((x) => x.id === 'classmate');
+  assert.equal(c.label, '老同學');
+  const res = E.recommend(base({ county: 'TNN', solo: false, companions: ['classmate'], size: 5, mood: 'calm' }));
+  const top = res.picks[0];
+  assert.ok(top.parts.some((p) => p.src === 'company' && p.delta > 0));
+  assert.match(E.narrate(top, base({ solo: false, companions: ['classmate'], size: 5 }), res.ctx), /老同學/);
+});
+
+test('只推在地代表性美食，沒有時退回全部並註明', () => {
+  const res = E.recommend(base({ county: 'KIN', slot: 'l', localOnly: true }));
+  assert.ok(res.ctx.localOnly);
+  assert.equal(res.picks.length, 6);
+  assert.ok(res.ranked.every((r) => r.food.county === 'KIN'));
+  // 新竹市沒有消夜時段的在地美食
+  const none = E.recommend(base({ county: 'HSZ', slot: 'n', localOnly: true }));
+  assert.ok(none.ctx.localFallback && !none.ctx.localOnly);
+  assert.ok(none.picks.length > 0);
+  assert.match(E.narrate(none.picks[0], base({ county: 'HSZ', slot: 'n' }), none.ctx), /代表性美食都還沒開賣/);
+  // 沒選縣市時忽略這個選項
+  const noCounty = E.recommend(base({ county: null, localOnly: true }));
+  assert.ok(!noCounty.ctx.localOnly && noCounty.picks.length > 0);
+});

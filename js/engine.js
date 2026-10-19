@@ -231,8 +231,15 @@
 
   function recommend(st) {
     var ctx = buildContext(st);
-    var ranked = D.FOODS
-      .filter(function (food) { return eligible(food, st, ctx.now.m); })
+    var pool = D.FOODS.filter(function (food) { return eligible(food, st, ctx.now.m); });
+    // 只推在地代表性美食；這個時段沒有符合的在地美食時，退回全部美食並註明
+    ctx.localOnly = false;
+    ctx.localFallback = false;
+    if (st.localOnly && st.county) {
+      var localPool = pool.filter(function (food) { return food.county; });
+      if (localPool.length) { pool = localPool; ctx.localOnly = true; } else { ctx.localFallback = true; }
+    }
+    var ranked = pool
       .map(function (food) { return scoreFood(food, st, ctx); })
       .sort(function (a, b) { return b.score - a.score; });
 
@@ -247,6 +254,13 @@
       perCat[cat] = (perCat[cat] || 0) + 1;
       seen[k0] = true;
       picks.push(ranked[i]);
+    }
+    // 候選太少（例如只推在地美食）時，放寬同類別限制補滿六道
+    for (var f2 = 0; f2 < ranked.length && picks.length < 6; f2++) {
+      var fk = firstKeyword(ranked[f2].food);
+      if (picks.indexOf(ranked[f2]) >= 0 || seen[fk]) continue;
+      seen[fk] = true;
+      picks.push(ranked[f2]);
     }
     // 至少放兩道在地美食（分數別差太多的話），在地是這個 App 的重點
     var locals = ranked.filter(function (r) { return r.food.county; });
@@ -333,6 +347,7 @@
     if (st.solo) return '一個人也要好好吃飯';
     var ids = ctx.companions.map(function (c) { return c.id; });
     if (ids.indexOf('client') >= 0) return '跟客戶吃飯要體面又安心';
+    if (ids.indexOf('classmate') >= 0) return '跟老同學吃飯，就找有回憶的老味道';
     if (ids.indexOf('date') >= 0) return '約會就選有氣氛的';
     if (ids.indexOf('elder') >= 0) return '有長輩同行，要好咬又順口';
     if (ids.indexOf('kids') >= 0) return '帶小朋友要不辣又好入口';
@@ -354,7 +369,8 @@
     }
     var tip = '';
     var ids = ctx.weather.map(function (w) { return w.id; });
-    if (ctx.festivals.length) tip = (ctx.festivals[0].inDays === 0 ? '今天是' + ctx.festivals[0].name + '，' : '') + ctx.festivals[0].msg;
+    if (ctx.localFallback) tip = '這個時段' + (ctx.county ? ctx.county.name : '') + '的代表性美食都還沒開賣，先推全台美食給你。';
+    else if (ctx.festivals.length) tip = (ctx.festivals[0].inDays === 0 ? '今天是' + ctx.festivals[0].name + '，' : '') + ctx.festivals[0].msg;
     else if (ids.indexOf('storm') >= 0) tip = '颱風天別亂跑，叫外送或去樓下超商就好。';
     else if (ids.indexOf('rain') >= 0) tip = '出門記得帶傘喔！';
     else if (st.slot === 'n') tip = '消夜適量，明天的體重計會記得的。';

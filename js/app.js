@@ -34,6 +34,7 @@
     budget: prefs.budget || 2,
     diets: Array.isArray(prefs.diets) ? prefs.diets : [],
     distance: prefs.distance || 'walk',
+    scope: prefs.scope === 'local' ? 'local' : 'all',
     seed: Math.floor(Math.random() * 1e6),
     result: null,
     st: null,
@@ -55,7 +56,7 @@
     ['explain', '天氣和時段我幫你看好了，不對的話可以自己改喔！'],
     ['think', '今天心情怎麼樣？選一張最像你的臉！'],
     ['surprise', '今天一個人吃，還是有飯友呢？'],
-    ['wink', '最後一格！預算和忌口告訴我，就可以開始分析囉。'],
+    ['wink', '最後一格！推薦範圍、預算和忌口告訴我，就可以開始分析囉。'],
   ];
   const ALLAN_SAYS = {
     calm: '不錯喔！', joy: '好耶！', unsure: '好⋯好吧！', curious: '哇，沒吃過！', busy: '快走快走！',
@@ -65,7 +66,11 @@
   const byId = E.byId;
   const countyObj = () => (state.county ? byId(D.COUNTIES, state.county) : null);
   const slotObj = () => byId(D.SLOTS, state.slot);
-  const savePrefs = () => S.store.set(PREFS_KEY, { me: state.me, budget: state.budget, diets: state.diets, distance: state.distance });
+  const savePrefs = () => S.store.set(PREFS_KEY, { me: state.me, budget: state.budget, diets: state.diets, distance: state.distance, scope: state.scope });
+  const SCOPES = [
+    { id: 'all', label: '🍱 全部美食', hint: '在地名產＋全台通用' },
+    { id: 'local', label: '📍 在地代表性美食', hint: '只推這個縣市的名產' },
+  ];
 
   // ---------- 阿拉蕾說話 ----------
   function typeInto(el, text, speed) {
@@ -368,6 +373,7 @@
         state.companions = on ? state.companions.concat(c.id) : state.companions.filter((x) => x !== c.id);
         if (on && c.id === 'client') say('explain', '跟客戶吃飯？阿拉蕾會避開路邊攤和味道重的。');
         if (on && c.id === 'date') say('wink', '約會呀～我會挑有氣氛的，蒜頭和臭豆腐先不要！');
+        if (on && c.id === 'classmate') say('laugh', '老同學聚會！來點懷舊的老味道，邊吃邊聊當年～');
         updateSummary();
       }));
     });
@@ -431,6 +437,22 @@
         updateSummary();
       }));
     });
+    const scope = $('#scope-seg');
+    SCOPES.forEach((x) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.dataset.id = x.id;
+      el.setAttribute('role', 'radio');
+      el.innerHTML = x.label + '<small>' + x.hint + '</small>';
+      el.addEventListener('click', () => {
+        state.scope = x.id;
+        savePrefs();
+        renderPrefs();
+        const c = countyObj();
+        if (x.id === 'local') say(c ? 'wink' : 'confused', c ? '好！只推' + c.name + '的 ' + c.foods.length + ' 道代表性美食。' : '先在第 1 格選縣市，我才知道要推哪裡的名產喔！');
+      });
+      scope.appendChild(el);
+    });
     const dist = $('#distance-seg');
     D.DISTANCES.forEach((d) => {
       const el = document.createElement('button');
@@ -445,6 +467,7 @@
   function renderPrefs() {
     $$('#budget-seg button').forEach((b) => b.setAttribute('aria-checked', String(Number(b.dataset.id) === state.budget)));
     $$('#distance-seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === state.distance)));
+    $$('#scope-seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === state.scope)));
     updateSummary();
   }
 
@@ -472,7 +495,8 @@
     $('#sum-1').textContent = weatherIcon() + (temp || wLabel || '') + '・' + slot.label;
     $('#sum-2').textContent = mood ? mood.label : '未選';
     $('#sum-3').textContent = state.solo ? '一個人' : state.size + ' 人';
-    $('#sum-4').textContent = byId(D.BUDGETS, state.budget).label + (state.diets.length ? '・忌口 ' + state.diets.length : '');
+    $('#sum-4').textContent = byId(D.BUDGETS, state.budget).label + (state.scope === 'local' ? '・在地限定' : '') +
+      (state.diets.length ? '・忌口 ' + state.diets.length : '');
     $('#st-place').textContent = '📍 ' + (c ? c.name : '選地點');
     $('#st-weather').textContent = weatherIcon() + ' ' + (temp || wLabel || '天氣');
     $('#st-slot').textContent = slot.icon + ' ' + slot.label;
@@ -493,6 +517,7 @@
       size: state.solo ? 1 : state.size,
       budget: state.budget,
       diets: state.diets,
+      localOnly: state.scope === 'local',
       history: meals.map((m) => ({ id: m.id, cat: m.cat, ts: m.ts })),
       near: state.located && state.coords ? { lat: state.coords.lat, lon: state.coords.lon } : null,
       seed: state.seed,
@@ -506,7 +531,8 @@
     const wx = res.ctx.weather.map((w) => w.label).join('・') || '未知（略過）';
     const who = state.solo ? '一個人' : (res.ctx.companions.map((x) => x.label).join('、') || '飯友') + '，' + st.size + ' 人';
     return [
-      ['📍', '讀取地理環境：' + (c ? c.name + '（' + c.foods.length + ' 道在地美食）' : '未指定，用全台通用美食')],
+      ['📍', '讀取地理環境：' + (c ? c.name + '（' + c.foods.length + ' 道在地美食）' : '未指定，用全台通用美食') +
+        (state.scope === 'local' ? (res.ctx.localOnly ? '，只推在地代表性美食' : c ? '，這個時段沒有在地美食，改推全部' : '，先選縣市才能只推在地') : '')],
       ['🌦️', '分析天氣：' + wx],
       ['🕐', '確認時段：' + slotObj().label],
       ['💭', '判讀心情：' + (mood ? (state.moodGuessed ? '我猜是「' + mood.label + '」' : mood.label) : '交給直覺')],
@@ -725,6 +751,7 @@
       '- 心情：' + (mood ? mood.label + '（' + mood.sub + '）' : '沒說'),
       '- 飯友：' + (state.solo ? '一個人' : (res.ctx.companions.map((x) => x.label).join('、') || '朋友') + '，共 ' + st.size + ' 人' +
         (state.names.length ? '（' + state.names.join('、') + '）' : '')),
+      '- 推薦範圍：' + (res.ctx.localOnly ? '只推在地代表性美食' : '在地名產＋全台通用') + '\n' +
       '- 預算：' + byId(D.BUDGETS, state.budget).label + '；忌口：' + (state.diets.map((d) => byId(D.DIETS, d).label).join('、') || '無'),
       '- 節日：' + (res.ctx.festivals.map((f) => f.name).join('、') || '無'),
       '- 最近吃過：' + (recent.join('、') || '沒有紀錄'),

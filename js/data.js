@@ -671,6 +671,7 @@
   // ---------- 飯友 ----------
   var COMPANIONS = [
     { id: 'friends', label: '好朋友', icon: '🙌', w: { group: 10, share: 8, nightmarket: 6, celebrate: 4 } },
+    { id: 'classmate', label: '老同學', icon: '🎓', w: { classic: 8, group: 8, share: 8, nightmarket: 6, street: 4, celebrate: 4 } },
     { id: 'date', label: '約會', icon: '💕', w: { date: 20, treat: 4, smelly: -30, messy: -10 } },
     { id: 'family', label: '家人', icon: '🏠', w: { family: 15, share: 8 } },
     { id: 'cowork', label: '同事', icon: '💼', w: { cowork: 12, quick: 4, share: 4 } },
