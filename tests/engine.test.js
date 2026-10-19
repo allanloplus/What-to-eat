@@ -139,3 +139,53 @@ test('Overpass 查詢：座標模糊到小數三位、關鍵字會跳脫', () =>
   assert.equal(S.classify({ tags: { name: '巷口 7-ELEVEN 門市' } }, [fake]), 0);
   assert.equal(S.classify({ tags: { name: '別的店' } }, [fake]), -1);
 });
+
+test('鄉鎮資料：每個 town 都有座標，而且落在所屬縣市', () => {
+  for (const f of D.FOODS.filter((x) => x.town)) {
+    const t = D.TOWNS[f.town];
+    assert.ok(t, f.id + ' 的鄉鎮「' + f.town + '」沒有座標');
+    assert.equal(E.detectCounty(t[0], t[1]).county.id, f.county, f.id + ' 的鄉鎮不在 ' + f.county);
+  }
+});
+
+test('口袋名店與代表性美食', () => {
+  for (const f of D.FOODS.filter((x) => x.shops)) {
+    for (const shop of f.shops) {
+      assert.ok(shop.name, f.id + ' 名店缺店名');
+      assert.match(shop.url, /^https:\/\/maps\.app\.goo\.gl\/\w+$/, f.id + ' 名店連結');
+    }
+  }
+  const kin = D.COUNTIES.find((c) => c.id === 'KIN').foods.map((f) => f.name);
+  for (const name of ['高坑牛肉麵', '高坑牛肉乾', '金門炒泡麵', '廣東粥', '金門海產熱炒']) assert.ok(kin.includes(name), '金門缺 ' + name);
+  const shops = D.FOODS.filter((f) => f.county === 'KIN' && f.shops).flatMap((f) => f.shops.map((x) => x.name));
+  assert.equal(shops.length, 10);
+  assert.ok(D.FOODS.some((f) => f.id === 'CHA:溪湖羊肉爐' && f.town === '溪湖'));
+  for (const c of D.COUNTIES) assert.ok(c.foods.length >= 9, c.name + ' 只有 ' + c.foods.length + ' 道');
+});
+
+test('GPS 在名產鄉鎮附近會加分，遠的不會', () => {
+  const near = E.recommend(base({ county: 'CHA', near: { lat: 23.96, lon: 120.48 }, weather: { temp: 'cold' }, mood: 'calm', solo: false, companions: ['friends'], size: 4 }));
+  const yang = near.ranked.find((r) => r.food.name === '溪湖羊肉爐');
+  assert.ok(yang.parts.some((p) => p.src === 'near:溪湖' && p.delta === 12));
+  assert.equal(near.picks[0].food.name, '溪湖羊肉爐');
+  assert.match(E.narrate(near.picks[0], base({ county: 'CHA' }), near.ctx), /你就在溪湖附近/);
+  const far = E.recommend(base({ county: 'CHA', near: { lat: 24.08, lon: 120.54 } }));
+  assert.ok(!far.ranked.find((r) => r.food.name === '溪湖羊肉爐').parts.some((p) => p.tag === 'near'));
+});
+
+test('前六名不會出現同一種菜兩次', () => {
+  for (const county of ['TPE', 'TYN', 'HSZ', 'HSQ', 'KIN', 'CHA']) {
+    for (const slot of ['l', 'd', 't']) {
+      const res = E.recommend(base({ county, slot, mood: 'calm' }));
+      const keys = res.picks.map((p) => p.food.kw.split('|')[0]);
+      assert.equal(new Set(keys).size, keys.length, county + slot + ' ' + keys.join(','));
+    }
+  }
+});
+
+test('口袋名店的店名也拿來比對 OpenStreetMap', () => {
+  const food = D.FOODS.find((f) => f.name === '金門海產熱炒');
+  assert.equal(S.classify({ tags: { name: '信源海產店' } }, [food]), 0);
+  assert.match(S.buildQuery([food], 24.43, 118.32, 3000), /信源海產店/);
+  assert.ok(!/金城分店/.test(S.buildQuery([food], 24.43, 118.32, 3000)));
+});

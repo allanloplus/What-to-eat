@@ -131,13 +131,18 @@
       return;
     }
     const month = E.taipeiNow().m;
+    const hasShops = c.foods.some((f) => f.shops);
     card.innerHTML =
-      '<h3>' + esc(c.name) + '<span class="region">' + esc(c.region) + '</span></h3>' +
+      '<h3>' + esc(c.name) + '<span class="region">' + esc(c.region) + '・' + c.foods.length + ' 道在地美食</span></h3>' +
       '<p class="blurb">' + esc(c.blurb) + '</p>' +
       '<ul>' + c.foods.map((f) => {
         const off = f.months && f.months.indexOf(month) < 0;
-        return '<li' + (off ? ' class="off" title="非當季"' : '') + '>' + f.emoji + ' ' + esc(f.name) + '</li>';
-      }).join('') + '</ul>';
+        const title = [off ? '非當季' : '', f.town ? f.town : '', f.shops ? '口袋名店：' + f.shops.map((x) => x.name).join('、') : '']
+          .filter(Boolean).join('｜');
+        return '<li' + (off ? ' class="off"' : '') + (title ? ' title="' + esc(title) + '"' : '') + '>' + f.emoji + ' ' + esc(f.name) +
+          (f.shops ? ' <span class="pin" aria-label="有口袋名店">📌</span>' : '') + '</li>';
+      }).join('') + '</ul>' +
+      (hasShops ? '<p class="legend">📌 有朋友推薦的口袋名店</p>' : '');
   }
 
   function previewCounty(id) {
@@ -489,6 +494,7 @@
       budget: state.budget,
       diets: state.diets,
       history: meals.map((m) => ({ id: m.id, cat: m.cat, ts: m.ts })),
+      near: state.located && state.coords ? { lat: state.coords.lat, lon: state.coords.lon } : null,
       seed: state.seed,
     };
   }
@@ -585,8 +591,14 @@
     $('#pick-emoji').textContent = f.emoji;
     $('#pick-name').textContent = f.name;
     $('#pick-desc').textContent = f.desc;
+    const shops = $('#pick-shops');
+    shops.hidden = !f.shops;
+    shops.innerHTML = f.shops ? '<b>📌 口袋名店</b>' + f.shops.map((x) =>
+      '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + ' ↗</a>' +
+      (x.note ? '<small>' + esc(x.note) + '</small>' : '')).join('') : '';
     const tags = [];
     if (c) tags.push('<span class="tag local">' + esc(c.short) + '在地</span>');
+    if (f.town && f.name.indexOf(f.town) < 0) tags.push('<span class="tag">📍' + esc(f.town) + '</span>');
     if (f.months) tags.push('<span class="tag">當季限定</span>');
     state.result.ctx.festivals.forEach((fest) => {
       if (fest.boost.indexOf(f.name) >= 0) tags.push('<span class="tag fest">' + fest.icon + ' ' + esc(fest.name) + '應景</span>');
@@ -651,7 +663,8 @@
       b.type = 'button';
       b.className = 'alt';
       b.innerHTML = '<span class="e">' + p.food.emoji + '</span><b>' + esc(p.food.name) + '</b>' +
-        '<small>' + esc(c ? c.short + '在地' : D.CAT_LABELS[p.food.cat]) + '</small><span class="pct">' + p.pct + '% 適配</span>';
+        '<small>' + esc(c ? (p.food.town || c.short) + '在地' : D.CAT_LABELS[p.food.cat]) + (p.food.shops ? '・📌 名店' : '') + '</small>' +
+        '<span class="pct">' + p.pct + '% 適配</span>';
       b.addEventListener('click', () => setMain(i));
       box.appendChild(b);
     });
@@ -699,7 +712,8 @@
     const lines = res.picks.map((p, i) => {
       const pc = p.food.county ? byId(D.COUNTIES, p.food.county) : null;
       return (i + 1) + '. ' + p.food.name + '｜' + (D.CAT_LABELS[p.food.cat] || p.food.cat) + '｜' +
-        (pc ? pc.name + '在地' : '全台通用') + '｜' + p.food.desc;
+        (pc ? (p.food.town ? pc.name + p.food.town : pc.name) + '在地' : '全台通用') + '｜' + p.food.desc +
+        (p.food.shops ? '｜口袋名店：' + p.food.shops.map((x) => x.name).join('、') : '');
     });
     return [
       '你是「阿拉蕾」，戴耳機、綁雙馬尾的台灣 AI 美食小助手，說話活潑貼心，用台灣用語的繁體中文。你正在幫 ' + state.me + ' 決定這一餐要吃什麼。',
@@ -989,10 +1003,14 @@
 
     $('#nearby').hidden = false;
     $('#nb-title').textContent = '附近的「' + item.food.name + '」';
-    $('#nb-links').innerHTML = foods.slice(0, 3).map((f) => {
-      const q = f.kw.split('|')[0] + (center ? '' : c ? ' ' + c.name : '');
-      return '<a class="btn small" href="' + S.mapsSearch(q, center) + '" target="_blank" rel="noopener">Google 地圖搜「' + esc(f.kw.split('|')[0]) + '」↗</a>';
-    }).join('');
+    const shopLinks = (item.food.shops || []).map((x) =>
+      '<a class="btn small primary" href="' + esc(x.url) + '" target="_blank" rel="noopener">📌 ' + esc(x.name) + ' ↗</a>');
+    $('#nb-links').innerHTML = shopLinks.concat(foods.slice(0, 3).map((f) => {
+      const k0 = f.kw.split('|')[0];
+      // 有產地鄉鎮的名產直接搜產地；其他就搜你附近
+      const q = f.town && k0.indexOf(f.town) < 0 ? f.town + ' ' + k0 : k0 + (center ? '' : c ? ' ' + c.name : '');
+      return '<a class="btn small" href="' + S.mapsSearch(q, f.town ? null : center) + '" target="_blank" rel="noopener">Google 地圖搜「' + esc(q) + '」↗</a>';
+    })).join('');
     const radar = $('#radar');
     radar.innerHTML = radarBase(dist.meters);
     const list = $('#nb-list');

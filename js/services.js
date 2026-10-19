@@ -55,8 +55,14 @@
   // 太籠統的 cuisine 不拿去伺服器篩選，否則一個「chinese」就會撈回整條街
   var BROAD_CUISINE = ['chinese', 'taiwanese', 'regional', 'asian', 'japanese', 'american', 'fast_food', 'local'];
 
+  // 搜尋關鍵字加上口袋名店的店名（去掉括號裡的分店說明）
   function keywordsOf(food) {
-    return food.kw.split('|').map(function (k) { return k.trim(); }).filter(Boolean);
+    var kws = food.kw.split('|').map(function (k) { return k.trim(); }).filter(Boolean);
+    (food.shops || []).forEach(function (x) {
+      var name = x.name.replace(/[（(].*$/, '').trim();
+      if (name && kws.indexOf(name) < 0) kws.push(name);
+    });
+    return kws;
   }
   function cuisinesOf(food) {
     return food.cuisine ? food.cuisine.split('|').filter(Boolean) : [];

@@ -125,6 +125,10 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
+  function firstKeyword(food) {
+    return food.kw.split('|')[0];
+  }
+
   function priceOf(food) {
     if (food.tags.indexOf('p3') >= 0) return 3;
     if (food.tags.indexOf('p1') >= 0) return 1;
@@ -159,6 +163,12 @@
 
     if (food.county) add('local', 'local', 22);
     if (food.months) add('season', 'season', 10);
+    if (food.shops) add('shops', 'shops', 5);
+    // 有 GPS 時，名產所在的鄉鎮就在 8 公里內再加分
+    if (st.near && food.town && D.TOWNS[food.town] &&
+      haversine([st.near.lat, st.near.lon], D.TOWNS[food.town]) <= 8000) {
+      add('near:' + food.town, 'near', 12);
+    }
 
     ctx.weather.forEach(function (w) { applyWeights('weather:' + w.id, w.w); });
     if (ctx.mood) applyWeights('mood', ctx.mood.w);
@@ -226,13 +236,16 @@
       .map(function (food) { return scoreFood(food, st, ctx); })
       .sort(function (a, b) { return b.score - a.score; });
 
-    // 前六名：同類別最多兩道，避免一整排都是麵
+    // 前六名：同類別最多兩道，避免一整排都是麵；同一種菜（第一個搜尋關鍵字相同）只留一道
     var picks = [];
     var perCat = {};
+    var seen = {};
     for (var i = 0; i < ranked.length && picks.length < 6; i++) {
       var cat = ranked[i].food.cat;
-      if ((perCat[cat] || 0) >= 2) continue;
+      var k0 = firstKeyword(ranked[i].food);
+      if ((perCat[cat] || 0) >= 2 || seen[k0]) continue;
       perCat[cat] = (perCat[cat] || 0) + 1;
+      seen[k0] = true;
       picks.push(ranked[i]);
     }
     // 至少放兩道在地美食（分數別差太多的話），在地是這個 App 的重點
@@ -242,8 +255,12 @@
     for (var j = 0; j < locals.length && have < 2; j++) {
       if (picks.indexOf(locals[j]) >= 0 || locals[j].score < floor) continue;
       var drop = -1;
-      for (var k = picks.length - 1; k >= 0; k--) if (!picks[k].food.county) { drop = k; break; }
-      if (picks.length < 6) picks.push(locals[j]);
+      var lk = firstKeyword(locals[j].food);
+      for (var d = 0; d < picks.length; d++) if (firstKeyword(picks[d].food) === lk) { drop = d; break; }
+      if (drop >= 0 && picks[drop].food.county) continue;
+      if (drop < 0) for (var k = picks.length - 1; k >= 0; k--) if (!picks[k].food.county) { drop = k; break; }
+      if (drop >= 0 && firstKeyword(picks[drop].food) === lk) picks.splice(drop, 1, locals[j]);
+      else if (picks.length < 6) picks.push(locals[j]);
       else if (drop >= 0) picks.splice(drop, 1, locals[j]);
       else break;
       have++;
@@ -272,6 +289,8 @@
     if (head === 'budget') return { icon: '💰', text: '預算' + byId(D.BUDGETS, st.budget || 2).label };
     if (head === 'diet') return { icon: '🥗', text: '飲食偏好' };
     if (head === 'history') return { icon: '📒', text: '最近吃過' };
+    if (head === 'shops') return { icon: '📌', text: '口袋名店' };
+    if (head === 'near') return { icon: '📍', text: '就在' + key + '附近' };
     if (head === 'festival') {
       var f = D.FESTIVALS.filter(function (x) { return x.name === key; })[0];
       return { icon: f ? f.icon : '🎉', text: key };
@@ -286,6 +305,8 @@
     if (tag === 'festival') return '應景';
     if (tag === 'season') return '當季';
     if (tag === 'luck') return '靈感';
+    if (tag === 'shops') return '朋友推薦';
+    if (tag === 'near') return '名產產地';
     return D.TAG_LABELS[tag] || D.CAT_LABELS[tag] || tag;
   }
 
@@ -325,7 +346,12 @@
     if (ctx.weather.length) bits.push(ctx.weather[ctx.weather.length - 1].phrase);
     var line1 = slot.hello + '！' + bits.join('、') + (bits.length ? '，' : '') +
       (ctx.mood ? ctx.mood.phrase + '，' : '') + companyPhrase(st, ctx) + '。';
-    var line2 = '阿拉蕾推薦你吃「' + item.food.name + '」！' + item.food.desc + '。';
+    var nearTown = item.parts.filter(function (p) { return p.tag === 'near'; })[0];
+    var line2 = (nearTown ? '你就在' + item.food.town + '附近，' : '') +
+      '阿拉蕾推薦你吃「' + item.food.name + '」！' + item.food.desc + '。';
+    if (item.food.shops) {
+      line2 += '\n朋友推薦的口袋名店：' + item.food.shops.map(function (x) { return x.name; }).join('、') + '。';
+    }
     var tip = '';
     var ids = ctx.weather.map(function (w) { return w.id; });
     if (ctx.festivals.length) tip = (ctx.festivals[0].inDays === 0 ? '今天是' + ctx.festivals[0].name + '，' : '') + ctx.festivals[0].msg;

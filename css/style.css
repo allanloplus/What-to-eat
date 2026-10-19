@@ -594,6 +594,14 @@ button, input { font: inherit; color: inherit; }
 .county-card li { border: 2px solid var(--line); border-radius: 999px; padding: 0.1em 0.7em; background: var(--panel); font-size: 0.9rem; }
 .county-card li.off { opacity: 0.45; text-decoration: line-through; }
 .county-empty { color: var(--muted); }
+.county-card .pin { font-size: 0.8em; }
+.county-card .legend { margin-top: 0.6rem; font-size: 0.8rem; color: var(--muted); }
+.pick-shops { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; margin-top: 0.6rem; font-size: 0.92rem; }
+.pick-shops b { font-weight: 700; }
+.pick-shops a { color: var(--teal); font-weight: 700; }
+.pick-shops small { color: var(--muted); font-size: 0.78rem; margin-left: -0.4rem; }
+.pick-shops small::before { content: "（"; }
+.pick-shops small::after { content: "）"; }
 
 /* ---------- weather & slots ---------- */
 .wx-now {
